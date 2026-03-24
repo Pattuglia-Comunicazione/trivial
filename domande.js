@@ -5,7 +5,7 @@ export const questions = [
   {
     cat: 4,
     q: "Qual è il carattere tipografico (font) scelto per la comunicazione istituzionale dell'Associazione?",
-    a: "Il font 'TheSans' (mentre Roboto è usato per il web/app)."
+    a: "Il font Roboto e Tahoma in assenza."
   },
   {
     cat: 5,
