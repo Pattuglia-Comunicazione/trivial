@@ -1,7 +1,7 @@
 // domande.js
 export const questions = [
-  // cat 1: Giallo | cat 2: Verde | cat 3: Arancione 
-  // cat 4: Rosa | cat 5: Celeste | cat 6: Marrone
+  // cat 1: Giallo L/C | cat 2: Verde E/G | cat 3: Arancione/Rosso R/S
+  // cat 4: Rosa Co.Ca. | cat 5: Celeste Gruppo | cat 6: Marrone Privacy
   { cat: 1, q: "Qual è il motto dei Lupetti?", a: "Del nostro meglio" },
   { cat: 2, q: "Qual è la legge del Branco?", a: "Il lupetto ascolta il vecchio lupo..." },
   { cat: 2, q: "Qual è il nodo che si usa per iniziare una legatura?", a: "Parlato" },
