@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Trivial Pursuit - Bari Centro</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700;900&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        * { font-family: 'Roboto', sans-serif !important; }
+        body { background-color: #ECE9E6; color: #211638; touch-action: manipulation; }
+        
+        .wheel-container { position: relative; width: 320px; height: 320px; }
+        .wheel-svg { overflow: hidden; border-radius: 50%; }
+
+        .slice { 
+            cursor: pointer; 
+            transition: filter 0.2s ease; 
+            outline: none;
+            stroke: #211638;
+            stroke-width: 0.4;
+        }
+        .slice:hover { filter: brightness(1.15); }
+        .slice:active { filter: brightness(0.9); }
+        
+        .legend-item { display: flex; align-items: center; gap: 8px; font-size: 0.85rem; font-weight: 700; color: #462678; }
+        .dot { width: 14px; height: 14px; border-radius: 50%; flex-shrink: 0; border: 1px solid rgba(0,0,0,0.1); }
+    </style>
+</head>
+<body class="flex flex-col items-center p-6 min-h-screen">
+
+    <img src="https://i.ibb.co/ycBGK8bj/baricentro.webp" alt="Bari Centro" class="w-40 mb-4 drop-shadow-sm">
+
+    <header class="text-center mb-6">
+        <h1 class="text-3xl font-black uppercase tracking-tighter text-[#462678]">Trivial Pursuit</h1>
+        <p class="text-[#E74030] font-bold text-lg uppercase tracking-widest">Zona Bari Centro</p>
+    </header>
+
+    <div class="wheel-container mb-8">
+        <svg viewBox="0 0 100 100" class="wheel-svg w-full h-full drop-shadow-2xl">
+            <defs>
+                <clipPath id="circleView"><circle cx="50" cy="50" r="48.5" /></clipPath>
+            </defs>
+            <g clip-path="url(#circleView)">
+                <path d="M50,50 L50,0 A50,50 0 0,1 93.3,25 Z" fill="#FDC500" class="slice" onclick="handleCategoryClick(1)" />
+                <path d="M50,50 L93.3,25 A50,50 0 0,1 93.3,75 Z" fill="#8B4513" class="slice" onclick="handleCategoryClick(6)" />
+                <path d="M50,50 L93.3,75 A50,50 0 0,1 50,100 Z" fill="#21A067" class="slice" onclick="handleCategoryClick(2)" />
+                <path d="M50,50 L50,100 A50,50 0 0,1 6.7,75 Z" fill="#E74030" class="slice" onclick="handleCategoryClick(3)" />
+                <path d="M50,50 L6.7,75 A50,50 0 0,1 6.7,25 Z" fill="#92B3D7" class="slice" onclick="handleCategoryClick(5)" />
+                <path d="M50,50 L6.7,25 A50,50 0 0,1 50,0 Z" fill="#9B66A5" class="slice" onclick="handleCategoryClick(4)" />
+            </g>
+            <circle cx="50" cy="50" r="48.5" fill="none" stroke="#211638" stroke-width="2.5" />
+        </svg>
+    </div>
+
+    <div class="grid grid-cols-2 gap-x-8 gap-y-3 mb-10 w-full max-w-xs">
+        <div class="legend-item"><div class="dot" style="background:#FDC500"></div>Branca L/C</div>
+        <div class="legend-item"><div class="dot" style="background:#21A067"></div>Branca E/G</div>
+        <div class="legend-item"><div class="dot" style="background:#E74030"></div>Branca R/S</div>
+        <div class="legend-item"><div class="dot" style="background:#9B66A5"></div>CoCa</div>
+        <div class="legend-item"><div class="dot" style="background:#92B3D7"></div>Vita Gruppo</div>
+        <div class="legend-item"><div class="dot" style="background:#8B4513"></div>Privacy</div>
+    </div>
+
+    <div id="game-card" class="w-full max-w-sm bg-white rounded-3xl shadow-xl p-6 hidden">
+        <div id="cat-tag" class="inline-block px-3 py-1 rounded-full text-white text-[10px] font-black mb-3 uppercase tracking-widest"></div>
+        <p id="q-text" class="text-xl font-bold leading-tight mb-6 text-[#211638]"></p>
+        
+        <div class="space-y-3">
+            <button onclick="document.getElementById('a-text').classList.toggle('hidden')" 
+                    class="w-full bg-[#462678] text-white py-4 rounded-2xl font-black active:bg-[#211638] shadow-lg">
+                MOSTRA RISPOSTA
+            </button>
+            <p id="a-text" class="hidden text-center text-lg font-black text-[#21A067] p-4 bg-green-50 rounded-xl border-2 border-green-200"></p>
+            
+            <button id="timer-btn" onclick="startTimer()" 
+                    class="w-full border-2 border-[#E74030] text-[#E74030] py-3 rounded-2xl font-black uppercase text-xs tracking-widest">
+                Avvia Timer (30s)
+            </button>
+        </div>
+        <button onclick="clearHistory()" class="mt-8 text-[10px] text-gray-400 block mx-auto underline">Resetta domande fatte</button>
+    </div>
+
+    <script type="module">
+        import { questions } from './domande.js';
+
+        const categoryConfig = {
+            1: { label: "Branca L/C", color: "#FDC500" },
+            2: { label: "Branca E/G", color: "#21A067" },
+            3: { label: "Branca R/S", color: "#E74030" },
+            4: { label: "Comunità Capi", color: "#9B66A5" },
+            5: { label: "Vita di Gruppo", color: "#92B3D7" },
+            6: { label: "Privacy", color: "#8B4513" }
+        };
+
+        window.handleCategoryClick = function(cat) {
+            // Mappiamo le domande con ID (indice)
+            const questionsWithId = questions.map((q, index) => ({ ...q, id: index }));
+            const catQuestions = questionsWithId.filter(q => q.cat === cat);
+            
+            let seenIds = JSON.parse(localStorage.getItem('trivial_seen_ids') || '[]');
+            const available = catQuestions.filter(q => !seenIds.includes(q.id));
+
+            if (available.length === 0) {
+                alert("Domande finite per questa categoria! Le resetto...");
+                clearHistory();
+                return;
+            }
+
+            const selected = available[Math.floor(Math.random() * available.length)];
+            seenIds.push(selected.id);
+            localStorage.setItem('trivial_seen_ids', JSON.stringify(seenIds));
+
+            showQuestion(selected, categoryConfig[cat]);
+        }
+
+        function showQuestion(q, config) {
+            const card = document.getElementById('game-card');
+            card.classList.remove('hidden');
+            card.scrollIntoView({ behavior: 'smooth' });
+
+            const tag = document.getElementById('cat-tag');
+            tag.innerText = config.label;
+            tag.style.backgroundColor = config.color;
+            
+            document.getElementById('q-text').innerText = q.q;
+            document.getElementById('a-text').innerText = q.a;
+            document.getElementById('a-text').classList.add('hidden');
+            resetTimer();
+        }
+
+        window.clearHistory = function() {
+            localStorage.removeItem('trivial_seen_ids');
+            location.reload();
+        }
+
+        let interval;
+        window.startTimer = function() {
+            let time = 30;
+            const btn = document.getElementById('timer-btn');
+            btn.disabled = true;
+            clearInterval(interval);
+            interval = setInterval(() => {
+                time--;
+                btn.innerText = "Tempo: " + time + "s";
+                if(time <= 0) {
+                    clearInterval(interval);
+                    btn.innerText = "TEMPO SCADUTO!";
+                    btn.classList.add('bg-[#E74030]', 'text-white');
+                }
+            }, 1000);
+        }
+
+        window.resetTimer = function() {
+            clearInterval(interval);
+            const btn = document.getElementById('timer-btn');
+            btn.innerText = "Avvia Timer (30s)";
+            btn.disabled = false;
+            btn.className = "w-full border-2 border-[#E74030] text-[#E74030] py-3 rounded-2xl font-black uppercase text-xs tracking-widest";
+        }
+    </script>
+</body>
+</html>
