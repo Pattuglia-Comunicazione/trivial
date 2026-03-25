@@ -100,95 +100,131 @@
         <button onclick="window.clearHistory()" class="mt-10 text-[10px] text-gray-400 block mx-auto underline uppercase font-bold tracking-tighter">Resetta domande</button>
     </div>
 
-    <script type="module">
-        import { questions } from './domande.js?v=1.6';
+<script>
+    // Configurazione Categorie
+    const categoryConfig = {
+        1: { label: "Branca L/C", color: "#FDC500", key: "LC" }, // Nota: Aggiungi LC se presente nel foglio
+        2: { label: "Branca E/G", color: "#21A067", key: "EG" },
+        3: { label: "Branca R/S", color: "#E74030", key: "RS" },
+        4: { label: "Comunità Capi", color: "#9B66A5", key: "Coca" },
+        5: { label: "Gruppo e varie", color: "#92B3D7", key: "Generico" },
+        6: { label: "Privacy", color: "#8B4513", key: "Privacy" }
+    };
 
-        const categoryConfig = {
-            1: { label: "Branca L/C", color: "#FDC500" },
-            2: { label: "Branca E/G", color: "#21A067" },
-            3: { label: "Branca R/S", color: "#E74030" },
-            4: { label: "Comunità Capi", color: "#9B66A5" },
-            5: { label: "Gruppo e varie", color: "#92B3D7" },
-            6: { label: "Privacy", color: "#8B4513" }
-        };
+    let questions = []; // Verrà popolato dalla fetch
+    const webAppUrl = "https://script.google.com/macros/s/AKfycby6mjVqRaDLqHgCzHBx_OS0xjLxEYuWQ2XjkINlFSw0VIj20dDDNNBsOGAp-A0QrrxM/exec";
 
-        window.rollDice = function() {
-            const btn = document.getElementById('dice-btn');
-            const icon = document.getElementById('dice-icon');
-            const text = document.getElementById('dice-text');
+    // Funzione per caricare i dati all'avvio
+    async function initGame() {
+        try {
+            const response = await fetch(webAppUrl);
+            const rawData = await response.json();
             
-            btn.disabled = true;
-            icon.classList.add('dice-roll');
-            text.innerText = "...";
-            
-            setTimeout(() => {
-                const result = Math.floor(Math.random() * 6) + 1;
-                icon.classList.remove('dice-roll');
-                text.innerHTML = `RISULTATO: <span class="text-2xl ml-2 font-black">${result}</span>`;
-                btn.disabled = false; // Torna subito cliccabile
-            }, 400); // Animazione velocizzata
-        };
+            // Pulizia del JSON di Google per renderlo compatibile con la logica del gioco
+            questions = rawData.map((item, index) => {
+                // Troviamo la chiave della domanda e della risposta (che sono dinamiche nel tuo foglio)
+                const keys = Object.keys(item);
+                return {
+                    id: index,
+                    q: item[keys[0]], // La prima colonna è la domanda
+                    a: item[keys[1]], // La seconda colonna è la risposta
+                    // Mappiamo la stringa "Generico", "RS", ecc al numero categoria 1-6
+                    cat: Object.keys(categoryConfig).find(k => categoryConfig[k].key === item["Generico"]) || 5
+                };
+            }).filter(q => q.q && q.a); // Rimuove righe vuote
 
-        window.handleCategoryClick = function(cat) {
-            const questionsWithId = questions.map((q, index) => ({ ...q, id: index }));
-            const catQuestions = questionsWithId.filter(q => q.cat === cat);
-            let seenIds = JSON.parse(localStorage.getItem('trivial_seen_ids') || '[]');
-            const available = catQuestions.filter(q => !seenIds.includes(q.id));
-            
-            if (available.length === 0) {
-                alert("Domande finite per questa categoria! Le resetto...");
-                window.clearHistory();
-                return;
-            }
-            
-            const selected = available[Math.floor(Math.random() * available.length)];
-            seenIds.push(selected.id);
-            localStorage.setItem('trivial_seen_ids', JSON.stringify(seenIds));
-            showQuestion(selected, categoryConfig[cat]);
-        };
+            console.log("Domande caricate:", questions.length);
+            document.getElementById('dice-text').innerText = "Dati caricati! LANCIA IL DADO";
+        } catch (e) {
+            console.error("Errore caricamento:", e);
+            alert("Errore nel caricamento delle domande dal foglio.");
+        }
+    }
 
-        function showQuestion(q, config) {
-            const card = document.getElementById('game-card');
-            card.classList.remove('hidden');
-            card.scrollIntoView({ behavior: 'smooth' });
-            const tag = document.getElementById('cat-tag');
-            tag.innerText = config.label;
-            tag.style.backgroundColor = config.color;
-            document.getElementById('q-text').innerText = q.q;
-            document.getElementById('a-text').innerText = q.a;
-            document.getElementById('a-text').classList.add('hidden');
-            window.resetTimer();
+    window.rollDice = function() {
+        const btn = document.getElementById('dice-btn');
+        const icon = document.getElementById('dice-icon');
+        const text = document.getElementById('dice-text');
+        
+        btn.disabled = true;
+        icon.classList.add('dice-roll');
+        text.innerText = "...";
+        
+        setTimeout(() => {
+            const result = Math.floor(Math.random() * 6) + 1;
+            icon.classList.remove('dice-roll');
+            text.innerHTML = `RISULTATO: <span class="text-2xl ml-2 font-black">${result}</span>`;
+            btn.disabled = false;
+        }, 400);
+    };
+
+    window.handleCategoryClick = function(cat) {
+        if (questions.length === 0) {
+            alert("Pazienta un attimo, sto ancora scaricando le domande...");
+            return;
         }
 
-        window.clearHistory = function() {
-            localStorage.removeItem('trivial_seen_ids');
-            location.reload();
-        };
+        const catQuestions = questions.filter(q => parseInt(q.cat) === parseInt(cat));
+        let seenIds = JSON.parse(localStorage.getItem('trivial_seen_ids') || '[]');
+        const available = catQuestions.filter(q => !seenIds.includes(q.id));
+        
+        if (available.length === 0) {
+            alert("Domande finite per questa categoria! Resetto la memoria...");
+            window.clearHistory();
+            return;
+        }
+        
+        const selected = available[Math.floor(Math.random() * available.length)];
+        seenIds.push(selected.id);
+        localStorage.setItem('trivial_seen_ids', JSON.stringify(seenIds));
+        showQuestion(selected, categoryConfig[cat]);
+    };
 
-        let interval;
-        window.startTimer = function() {
-            let time = 30;
-            const btn = document.getElementById('timer-btn');
-            btn.disabled = true;
-            clearInterval(interval);
-            interval = setInterval(() => {
-                time--;
-                btn.innerText = "Tempo: " + time + "s";
-                if(time <= 0) {
-                    clearInterval(interval);
-                    btn.innerText = "TEMPO SCADUTO!";
-                    btn.classList.add('bg-[#E74030]', 'text-white');
-                }
-            }, 1000);
-        };
+    function showQuestion(q, config) {
+        const card = document.getElementById('game-card');
+        card.classList.remove('hidden');
+        card.scrollIntoView({ behavior: 'smooth' });
+        const tag = document.getElementById('cat-tag');
+        tag.innerText = config.label;
+        tag.style.backgroundColor = config.color;
+        document.getElementById('q-text').innerText = q.q;
+        document.getElementById('a-text').innerText = q.a;
+        document.getElementById('a-text').classList.add('hidden');
+        window.resetTimer();
+    }
 
-        window.resetTimer = function() {
-            clearInterval(interval);
-            const btn = document.getElementById('timer-btn');
-            btn.innerText = "Avvia Timer (30s)";
-            btn.disabled = false;
-            btn.className = "w-full border-2 border-[#E74030] text-[#E74030] py-3 rounded-2xl font-black uppercase text-xs tracking-widest";
-        };
-    </script>
+    window.clearHistory = function() {
+        localStorage.removeItem('trivial_seen_ids');
+        location.reload();
+    };
+
+    let interval;
+    window.startTimer = function() {
+        let time = 30;
+        const btn = document.getElementById('timer-btn');
+        btn.disabled = true;
+        clearInterval(interval);
+        interval = setInterval(() => {
+            time--;
+            btn.innerText = "Tempo: " + time + "s";
+            if(time <= 0) {
+                clearInterval(interval);
+                btn.innerText = "TEMPO SCADUTO!";
+                btn.classList.add('bg-[#E74030]', 'text-white');
+            }
+        }, 1000);
+    };
+
+    window.resetTimer = function() {
+        clearInterval(interval);
+        const btn = document.getElementById('timer-btn');
+        btn.innerText = "Avvia Timer (30s)";
+        btn.disabled = false;
+        btn.className = "w-full border-2 border-[#E74030] text-[#E74030] py-3 rounded-2xl font-black uppercase text-xs tracking-widest";
+    };
+
+    // Avvia il caricamento dei dati
+    initGame();
+</script>
 </body>
 </html>
